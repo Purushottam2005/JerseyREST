@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:vm="http://www.mulesoft.org/schema/mule/vm"
+	xmlns:core="http://www.mulesoft.org/schema/mule/core" xmlns:jersey="http://www.mulesoft.org/schema/mule/jersey" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:quartz="http://www.mulesoft.org/schema/mule/quartz" xmlns="http://www.mulesoft.org/schema/mule/core"
+	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.4.0"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/vm http://www.mulesoft.org/schema/mule/vm/current/mule-vm.xsd
+http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+http://www.mulesoft.org/schema/mule/quartz http://www.mulesoft.org/schema/mule/quartz/current/mule-quartz.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
+http://www.mulesoft.org/schema/mule/jersey http://www.mulesoft.org/schema/mule/jersey/current/mule-jersey.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+
+	<custom-transformer class="pl.poznachowski.jerseyrest.PopulateVariables" name="populateVariables" doc:name="Java" />
+
+	<flow name="JerseyRestFlow" doc:name="JerseyRestFlow">
+		<http:inbound-endpoint exchange-pattern="request-response" host="localhost" port="8080" doc:name="HTTP" />
+		<message-filter doc:name="Filter favicon">
+			<not-filter>
+				<wildcard-filter pattern="/favicon.ico" caseSensitive="true" />
+			</not-filter>
+		</message-filter>
+		<jersey:resources doc:name="REST">
+			<component class="pl.poznachowski.jerseyrest.JerseyRestService">
+				<binding interface="pl.poznachowski.jerseyrest.FlowProcessing" method="processGET">
+					<vm:outbound-endpoint exchange-pattern="request-response" path="vmProcessGET" />
+				</binding>
+				<binding interface="pl.poznachowski.jerseyrest.FlowProcessing" method="processPOST">
+					<vm:outbound-endpoint exchange-pattern="request-response" path="vmProcessPOST" />
+				</binding>
+			</component>
+			<jersey:exception-mapper class="pl.poznachowski.jerseyrest.BadURIExceptionMapper" />
+		</jersey:resources>
+	</flow>
+	<flow name="ProcessGetFlow" doc:name="ProcessGetFlow">
+		<vm:inbound-endpoint exchange-pattern="request-response" path="vmProcessGET" doc:name="VM" />
+		<transformer ref="populateVariables" doc:name="Populate variables"/>
+		<set-payload value="Processing GET with account id: #[accountID] and user id: #[userID]" doc:name="Set Payload" />
+	</flow>
+	<flow name="ProcessPostFlow" doc:name="ProcessPostFlow">
+		<vm:inbound-endpoint exchange-pattern="request-response" path="vmProcessPOST" doc:name="VM" />
+		<transformer ref="populateVariables" doc:name="Populate variables"/>
+		<set-payload value="Processing POST with account id: #[accountID] and user id: #[userID] and body: #[payload]"
+			doc:name="Set Payload" />
+	</flow>
+</mule>
